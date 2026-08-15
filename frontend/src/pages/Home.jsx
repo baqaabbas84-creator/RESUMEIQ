@@ -4,81 +4,212 @@ function Home() {
   return (
     <div className="home-page">
 
-      {/* Navbar */}
+      {/* ================= NAVBAR ================= */}
       <nav className="navbar">
-        <div className="logo">
+
+        <Link to="/" className="logo">
           Resume<span>IQ</span>
-        </div>
+        </Link>
 
         <div className="nav-links">
-          <Link to="/">Home</Link>
-          <Link to="/login">Login</Link>
+          <Link to="/" className="active">
+            Home
+          </Link>
+
+          <Link to="/login">
+            Login
+          </Link>
+
           <Link to="/register" className="register-btn">
             Get Started
           </Link>
         </div>
+
       </nav>
 
-      {/* Hero Section */}
-      <main className="hero">
-        <div className="hero-content">
-          <p className="badge">AI-Powered Career Platform</p>
 
-          <h1>RESUMEIQ TEST 12345</h1>
+      {/* ================= HERO ================= */}
+      <main className="hero">
+
+        {/* Decorative shapes */}
+        <div className="hero-blob blob-left"></div>
+        <div className="hero-blob blob-right"></div>
+
+        <div className="floating-circle circle-one"></div>
+        <div className="floating-circle circle-two"></div>
+        <div className="floating-circle circle-three"></div>
+        <div className="floating-circle circle-four"></div>
+
+        <div className="sparkle sparkle-one">✦</div>
+        <div className="sparkle sparkle-two">✦</div>
+        <div className="sparkle sparkle-three">✦</div>
+
+
+        {/* ================= HERO CONTENT ================= */}
+        <div className="hero-content">
+
+          <div className="badge">
+            <span>✦</span>
+            AI-Powered Career Platform
+          </div>
+
+          <h1>
+            Build a Better Career
+            <br />
+            with{" "}
+            <span className="gradient-text">
+              ResumeIQ
+            </span>
+          </h1>
 
           <p className="hero-description">
-            Upload your resume, analyze your ATS score, discover skill gaps,
-            and prepare for interviews using AI.
+            Upload your resume, analyze your ATS score,
+            discover skill gaps, and prepare for interviews
+            using AI.
           </p>
 
+
+          {/* Buttons */}
           <div className="hero-buttons">
-            <Link to="/register" className="primary-btn">
+
+            <Link
+              to="/register"
+              className="primary-btn"
+            >
+              <span className="btn-icon">☁</span>
               Analyze My Resume
             </Link>
 
-            <Link to="/login" className="secondary-btn">
+            <Link
+              to="/login"
+              className="secondary-btn"
+            >
+              <span className="arrow-icon">→</span>
               Login
             </Link>
+
           </div>
+
         </div>
 
-        {/* Feature Cards */}
+
+        {/* ================= DECORATIVE WAVES ================= */}
+
+        <div className="wave-decoration wave-left">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+
+        <div className="wave-decoration wave-right">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+
+
+        {/* ================= FEATURE CARDS ================= */}
+
         <div className="features">
 
-          <div className="feature-card">
-            <h3>📄 Resume Analysis</h3>
+          {/* Card 1 */}
+          <div className="feature-card card-purple">
+
+            <div className="feature-icon">
+              📄
+            </div>
+
+            <h3>
+              Resume Analysis
+            </h3>
+
             <p>
-              Upload your PDF or DOCX resume and get AI-powered analysis.
+              Upload your PDF or DOCX resume
+              and get AI-powered analysis.
             </p>
+
+            <div className="card-line"></div>
+
           </div>
 
-          <div className="feature-card">
-            <h3>📊 ATS Score</h3>
+
+          {/* Card 2 */}
+          <div className="feature-card card-green">
+
+            <div className="feature-icon">
+              📊
+            </div>
+
+            <h3>
+              ATS Score
+            </h3>
+
             <p>
-              Check how well your resume performs against ATS systems.
+              Check how well your resume
+              performs against ATS systems.
             </p>
+
+            <div className="card-line"></div>
+
           </div>
 
-          <div className="feature-card">
-            <h3>🎯 Skill Gap</h3>
+
+          {/* Card 3 */}
+          <div className="feature-card card-orange">
+
+            <div className="feature-icon">
+              🎯
+            </div>
+
+            <h3>
+              Skill Gap
+            </h3>
+
             <p>
-              Identify missing skills and understand what you need to improve.
+              Identify missing skills and
+              understand what you need to improve.
             </p>
+
+            <div className="card-line"></div>
+
           </div>
 
-          <div className="feature-card">
-            <h3>💬 Interview Prep</h3>
+
+          {/* Card 4 */}
+          <div className="feature-card card-blue">
+
+            <div className="feature-icon">
+              💬
+            </div>
+
+            <h3>
+              Interview Prep
+            </h3>
+
             <p>
-              Generate personalized interview questions using AI.
+              Generate personalized interview
+              questions using AI.
             </p>
+
+            <div className="card-line"></div>
+
           </div>
 
         </div>
+
       </main>
 
-      {/* Footer */}
+
+      {/* ================= FOOTER ================= */}
+
       <footer className="footer">
-        <p>© 2026 ResumeIQ. All rights reserved.</p>
+
+        <div className="footer-wave"></div>
+
+        <p>
+          © 2026 ResumeIQ. All rights reserved.
+        </p>
+
       </footer>
 
     </div>

@@ -1,55 +1,123 @@
 import { Link } from "react-router-dom";
 
-function Register() {
+function NotFound() {
   return (
-    <div>
-      <h1>Create Account</h1>
+    <div className="not-found-page">
 
-      <form>
-        <div>
-          <label>Name</label>
-          <br />
-          <input
-            type="text"
-            placeholder="Enter your name"
-          />
+      {/* Background decorations */}
+      <div className="not-found-orb orb-one"></div>
+      <div className="not-found-orb orb-two"></div>
+      <div className="not-found-grid"></div>
+
+
+      {/* Main Card */}
+      <main className="not-found-card">
+
+        {/* Logo */}
+        <Link to="/" className="not-found-logo">
+          Resume<span>IQ</span>
+        </Link>
+
+
+        {/* 404 Number */}
+        <div className="not-found-number">
+          404
         </div>
 
-        <br />
 
-        <div>
-          <label>Email</label>
-          <br />
-          <input
-            type="email"
-            placeholder="Enter your email"
-          />
+        {/* Icon */}
+        <div className="not-found-icon">
+          🔍
         </div>
 
-        <br />
 
-        <div>
-          <label>Password</label>
-          <br />
-          <input
-            type="password"
-            placeholder="Create a password"
-          />
+        {/* Badge */}
+        <span className="not-found-badge">
+          Oops! Page Not Found
+        </span>
+
+
+        {/* Heading */}
+        <h1>
+          Looks like you took a wrong turn.
+        </h1>
+
+
+        {/* Description */}
+        <p className="not-found-description">
+          The page you're looking for doesn't exist,
+          has been moved, or the link may be incorrect.
+        </p>
+
+
+        {/* Main Buttons */}
+        <div className="not-found-actions">
+
+          <Link
+            to="/"
+            className="not-found-primary-btn"
+          >
+            ← Back to Home
+          </Link>
+
+          <Link
+            to="/dashboard"
+            className="not-found-secondary-btn"
+          >
+            Go to Dashboard
+          </Link>
+
         </div>
 
-        <br />
 
-        <button type="submit">Register</button>
-      </form>
+        {/* Quick Links */}
+        <div className="not-found-divider">
+          <span>Quick Links</span>
+        </div>
 
-      <p>
-        Already have an account?{" "}
-        <Link to="/login">Login</Link>
-      </p>
 
-      <Link to="/">Back to Home</Link>
+        <div className="not-found-links">
+
+          <Link to="/upload-resume">
+            📄 Resume Analysis
+          </Link>
+
+          <Link to="/interview">
+            💬 Interview Prep
+          </Link>
+
+          <Link to="/history">
+            📊 History
+          </Link>
+
+          <Link to="/profile">
+            👤 Profile
+          </Link>
+
+        </div>
+
+
+        {/* Footer */}
+        <div className="not-found-footer">
+
+          <span>
+            ResumeIQ
+          </span>
+
+          <span>
+            •
+          </span>
+
+          <span>
+            Build a better career with AI
+          </span>
+
+        </div>
+
+      </main>
+
     </div>
   );
 }
 
-export default Register;
+export default NotFound;
