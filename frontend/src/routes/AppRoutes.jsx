@@ -7,7 +7,7 @@ import {
 import Home from "../pages/Home";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
-import ForgotPassword from "../pages/ForgotPassword";
+import ForgotPassword from "../components/auth/ForgotPassword";
 import Dashboard from "../pages/Dashboard";
 import UploadResume from "../pages/UploadResume";
 import Analysis from "../pages/Analysis";
