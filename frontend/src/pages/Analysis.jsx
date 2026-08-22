@@ -1,68 +1,247 @@
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { getResumeById } from "../services/resumeService";
 
 function Analysis() {
-  const atsScore = 87;
+  const navigate = useNavigate();
 
-  const skills = [
-    { name: "Java", level: "Strong", width: "90%" },
-    { name: "Spring Boot", level: "Good", width: "78%" },
-    { name: "React", level: "Good", width: "72%" },
-    { name: "SQL", level: "Strong", width: "88%" },
-    { name: "AWS", level: "Needs Improvement", width: "48%" },
-  ];
+  const [resume, setResume] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const matchedKeywords = [
-    "Java",
-    "Spring Boot",
-    "React",
-    "SQL",
-    "REST API",
-    "Git",
-  ];
+  useEffect(() => {
+    const loadAnalysis = async () => {
+      try {
+        setLoading(true);
+        setError("");
 
-  const missingKeywords = [
-    "Docker",
-    "AWS",
-    "Kubernetes",
-    "Microservices",
-  ];
+        const resumeId = localStorage.getItem("latestResumeId");
 
-  const recommendations = [
-    {
-      icon: "📝",
-      title: "Improve Resume Summary",
-      text: "Make your professional summary more focused on measurable achievements and target job roles.",
-    },
-    {
-      icon: "🎯",
-      title: "Add Missing Skills",
-      text: "Consider adding Docker, AWS and Microservices if you have relevant experience with them.",
-    },
-    {
-      icon: "📊",
-      title: "Add More Achievements",
-      text: "Use numbers and measurable results to demonstrate the impact of your work.",
-    },
-  ];
+        if (!resumeId) {
+          setError(
+            "No resume analysis found. Please upload a resume first."
+          );
+
+          setLoading(false);
+          return;
+        }
+
+        console.log("Loading resume:", resumeId);
+
+        const data = await getResumeById(resumeId);
+
+        console.log("Resume analysis:", data);
+
+        setResume(data);
+      } catch (err) {
+        console.error("Analysis loading error:", err);
+
+        setError(
+          err.response?.data?.message ||
+            "Failed to load resume analysis."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAnalysis();
+  }, []);
+
+  /* =========================================================
+     LOADING STATE
+     ========================================================= */
+
+  if (loading) {
+    return (
+      <div className="analysis-page">
+        <nav className="analysis-navbar">
+          <Link to="/" className="dashboard-logo">
+            Resume<span>IQ</span>
+          </Link>
+        </nav>
+
+        <main className="analysis-container">
+          <div className="analysis-loading">
+            <div className="analysis-loader"></div>
+
+            <h2>Analyzing Your Resume...</h2>
+
+            <p>
+              Please wait while we prepare your ATS report.
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  /* =========================================================
+     ERROR STATE
+     ========================================================= */
+
+  if (error) {
+    return (
+      <div className="analysis-page">
+        <nav className="analysis-navbar">
+          <Link to="/" className="dashboard-logo">
+            Resume<span>IQ</span>
+          </Link>
+
+          <div className="analysis-nav-links">
+            <Link to="/dashboard">
+              Dashboard
+            </Link>
+
+            <Link to="/history">
+              History
+            </Link>
+
+            <Link to="/profile">
+              Profile
+            </Link>
+          </div>
+        </nav>
+
+        <main className="analysis-container">
+          <div className="analysis-error-card">
+            <div className="analysis-error-icon">
+              ⚠️
+            </div>
+
+            <h2>
+              Analysis Not Available
+            </h2>
+
+            <p>
+              {error}
+            </p>
+
+            <button
+              className="analysis-primary-btn"
+              onClick={() =>
+                navigate("/upload-resume")
+              }
+            >
+              Upload Resume
+              <span>→</span>
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  /* =========================================================
+     RESUME DATA
+     ========================================================= */
+
+  const atsScore = Number(resume?.atsScore ?? 0);
+
+  const atsAnalysis = resume?.atsAnalysis || {
+    strengths: [],
+    weaknesses: [],
+    suggestions: [],
+  };
+
+  const skills = Array.isArray(resume?.skills)
+    ? resume.skills
+    : [];
+
+  const education = Array.isArray(resume?.education)
+    ? resume.education
+    : [];
+
+  const experience = Array.isArray(resume?.experience)
+    ? resume.experience
+    : [];
+
+  const projects = Array.isArray(resume?.projects)
+    ? resume.projects
+    : [];
+
+  const strengths = Array.isArray(
+    atsAnalysis?.strengths
+  )
+    ? atsAnalysis.strengths
+    : [];
+
+  const weaknesses = Array.isArray(
+    atsAnalysis?.weaknesses
+  )
+    ? atsAnalysis.weaknesses
+    : [];
+
+  const suggestions = Array.isArray(
+    atsAnalysis?.suggestions
+  )
+    ? atsAnalysis.suggestions
+    : [];
+
+  /* =========================================================
+     ATS RATING
+     ========================================================= */
+
+  let scoreRating = "Weak";
+
+  if (atsScore >= 85) {
+    scoreRating = "Excellent";
+  } else if (atsScore >= 70) {
+    scoreRating = "Good";
+  } else if (atsScore >= 50) {
+    scoreRating = "Needs Improvement";
+  }
+
+  /* =========================================================
+     SCORE DESCRIPTION
+     ========================================================= */
+
+  let scoreDescription =
+    "Your resume needs significant improvement.";
+
+  if (atsScore >= 85) {
+    scoreDescription =
+      "Your resume is highly optimized for ATS systems.";
+  } else if (atsScore >= 70) {
+    scoreDescription =
+      "Your resume has a strong ATS-friendly foundation.";
+  } else if (atsScore >= 50) {
+    scoreDescription =
+      "Your resume has a good foundation, but several areas can be improved.";
+  }
+
+  /* =========================================================
+     SCORE CIRCLE
+     ========================================================= */
+
+  const safeScore = Math.min(
+    Math.max(atsScore, 0),
+    100
+  );
+
+  const scoreAngle =
+    `${safeScore * 3.6}deg`;
 
   return (
     <div className="analysis-page">
 
-      {/* Navbar */}
-      <nav className="dashboard-navbar">
+      {/* =====================================================
+          NAVBAR
+          ===================================================== */}
 
-        <Link to="/" className="dashboard-logo">
+      <nav className="analysis-navbar">
+
+        <Link
+          to="/"
+          className="dashboard-logo"
+        >
           Resume<span>IQ</span>
         </Link>
 
-        <div className="dashboard-nav-links">
+        <div className="analysis-nav-links">
 
           <Link to="/dashboard">
             Dashboard
-          </Link>
-
-          <Link to="/upload-resume">
-            Upload Resume
           </Link>
 
           <Link to="/history">
@@ -78,383 +257,627 @@ function Analysis() {
       </nav>
 
 
-      {/* Main */}
+      {/* =====================================================
+          MAIN CONTAINER
+          ===================================================== */}
+
       <main className="analysis-container">
 
-        {/* Header */}
+
+        {/* ===================================================
+            HEADER
+            =================================================== */}
+
         <section className="analysis-header">
 
-          <span className="upload-badge">
+          <span className="analysis-badge">
             AI Resume Analysis
           </span>
 
           <h1>
-            Resume Analysis
+            Your Resume Analysis
           </h1>
 
           <p>
-            Here's how your resume currently performs and
-            what you can improve.
+            Here is how your resume performs against
+            ATS-friendly resume standards.
           </p>
 
         </section>
 
 
-        {/* Resume info */}
-        <div className="analysis-file">
+        {/* ===================================================
+            RESUME INFORMATION
+            =================================================== */}
 
-          <div className="analysis-file-icon">
+        <div className="analysis-resume-name">
+
+          <div className="analysis-resume-file-icon">
             📄
           </div>
 
           <div>
-            <h3>
-              My_Resume.pdf
-            </h3>
 
-            <p>
-              Analysis completed • Ready for improvements
-            </p>
+            <strong>
+              {resume?.title || "Resume"}
+            </strong>
+
+            <small>
+              {resume?.file?.originalName ||
+                resume?.originalName ||
+                "Uploaded Resume"}
+            </small>
+
           </div>
-
-          <Link to="/upload-resume">
-            Analyze Another
-          </Link>
 
         </div>
 
 
-        {/* ATS Score */}
-        <section className="ats-section">
+        {/* ===================================================
+            ATS SCORE
+            =================================================== */}
 
-          <div className="ats-score-card">
+        <section className="ats-score-card">
 
-            <div className="ats-circle">
+          <div
+            className="ats-score-circle"
+            style={{
+              background: `
+                conic-gradient(
+                  #3b82f6 0deg,
+                  #6366f1 ${scoreAngle},
+                  #e2e8f0 ${scoreAngle},
+                  #e2e8f0 360deg
+                )
+              `,
+            }}
+          >
 
-              <div className="ats-circle-inner">
-
-                <strong>
-                  {atsScore}
-                </strong>
-
-                <span>
-                  / 100
-                </span>
-
-              </div>
-
+            <div className="ats-score-number">
+              {atsScore}
             </div>
 
-            <div className="ats-score-info">
+            <div className="ats-score-total">
+              /100
+            </div>
 
-              <span className="analysis-label">
-                ATS SCORE
-              </span>
+          </div>
+
+
+          <div className="ats-score-content">
+
+            <span className="score-label">
+              ATS SCORE
+            </span>
+
+            <h2>
+              {scoreRating}
+            </h2>
+
+            <p>
+              {scoreDescription}
+            </p>
+
+          </div>
+
+        </section>
+
+
+        {/* ===================================================
+            STATISTICS
+            =================================================== */}
+
+        <section className="analysis-stats">
+
+          <div className="analysis-stat-card">
+
+            <span>
+              Skills
+            </span>
+
+            <strong>
+              {skills.length}
+            </strong>
+
+          </div>
+
+
+          <div className="analysis-stat-card">
+
+            <span>
+              Education
+            </span>
+
+            <strong>
+              {education.length}
+            </strong>
+
+          </div>
+
+
+          <div className="analysis-stat-card">
+
+            <span>
+              Experience
+            </span>
+
+            <strong>
+              {experience.length}
+            </strong>
+
+          </div>
+
+
+          <div className="analysis-stat-card">
+
+            <span>
+              Projects
+            </span>
+
+            <strong>
+              {projects.length}
+            </strong>
+
+          </div>
+
+        </section>
+
+
+        {/* ===================================================
+            STRENGTHS
+            =================================================== */}
+
+        <section className="analysis-section">
+
+          <div className="analysis-section-title">
+
+            <div className="analysis-section-icon">
+              ✓
+            </div>
+
+            <div>
 
               <h2>
-                Excellent Resume
+                Strengths
               </h2>
 
               <p>
-                Your resume has a strong structure and
-                contains most of the important keywords.
+                What your resume is doing well.
               </p>
 
-              <div className="score-status">
-                ✓ Good ATS Compatibility
-              </div>
-
             </div>
 
           </div>
 
 
-          {/* Score breakdown */}
-          <div className="score-breakdown">
+          <div className="analysis-list">
 
-            <h3>
-              Score Breakdown
-            </h3>
+            {strengths.length > 0 ? (
 
-            <div className="breakdown-item">
-
-              <span>
-                Keywords
-              </span>
-
-              <strong>
-                90%
-              </strong>
-
-            </div>
-
-            <div className="breakdown-bar">
-              <div style={{ width: "90%" }}></div>
-            </div>
-
-
-            <div className="breakdown-item">
-
-              <span>
-                Formatting
-              </span>
-
-              <strong>
-                92%
-              </strong>
-
-            </div>
-
-            <div className="breakdown-bar">
-              <div style={{ width: "92%" }}></div>
-            </div>
-
-
-            <div className="breakdown-item">
-
-              <span>
-                Skills
-              </span>
-
-              <strong>
-                84%
-              </strong>
-
-            </div>
-
-            <div className="breakdown-bar">
-              <div style={{ width: "84%" }}></div>
-            </div>
-
-
-            <div className="breakdown-item">
-
-              <span>
-                Content
-              </span>
-
-              <strong>
-                82%
-              </strong>
-
-            </div>
-
-            <div className="breakdown-bar">
-              <div style={{ width: "82%" }}></div>
-            </div>
-
-          </div>
-
-        </section>
-
-
-        {/* Keywords */}
-        <section className="analysis-section">
-
-          <div className="analysis-section-title">
-
-            <div>
-              <span className="analysis-label">
-                KEYWORD ANALYSIS
-              </span>
-
-              <h2>
-                Job-Relevant Keywords
-              </h2>
-            </div>
-
-          </div>
-
-
-          <div className="keyword-grid">
-
-            <div className="keyword-card matched">
-
-              <div className="keyword-card-header">
-
-                <h3>
-                  ✓ Matched Keywords
-                </h3>
-
-                <span>
-                  {matchedKeywords.length}
-                </span>
-
-              </div>
-
-              <div className="keyword-list">
-
-                {matchedKeywords.map((keyword) => (
-                  <span key={keyword}>
-                    {keyword}
-                  </span>
-                ))}
-
-              </div>
-
-            </div>
-
-
-            <div className="keyword-card missing">
-
-              <div className="keyword-card-header">
-
-                <h3>
-                  + Missing Keywords
-                </h3>
-
-                <span>
-                  {missingKeywords.length}
-                </span>
-
-              </div>
-
-              <div className="keyword-list">
-
-                {missingKeywords.map((keyword) => (
-                  <span key={keyword}>
-                    {keyword}
-                  </span>
-                ))}
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </section>
-
-
-        {/* Skills */}
-        <section className="analysis-section">
-
-          <div className="analysis-section-title">
-
-            <div>
-              <span className="analysis-label">
-                SKILL ANALYSIS
-              </span>
-
-              <h2>
-                Your Skill Profile
-              </h2>
-            </div>
-
-            <Link to="/interview">
-              Prepare for Interview →
-            </Link>
-
-          </div>
-
-
-          <div className="skills-card">
-
-            {skills.map((skill) => (
-
-              <div
-                className="skill-row"
-                key={skill.name}
-              >
-
-                <div className="skill-info">
-
-                  <strong>
-                    {skill.name}
-                  </strong>
-
-                  <span>
-                    {skill.level}
-                  </span>
-
-                </div>
-
-                <div className="skill-bar">
+              strengths.map(
+                (item, index) => (
 
                   <div
-                    style={{
-                      width: skill.width,
-                    }}
-                  ></div>
+                    className="analysis-list-item strength-item"
+                    key={index}
+                  >
 
-                </div>
+                    <span>
+                      ✓
+                    </span>
 
+                    <p>
+                      {item}
+                    </p>
+
+                  </div>
+
+                )
+              )
+
+            ) : (
+
+              <div className="analysis-empty">
+                No strengths detected yet.
               </div>
 
-            ))}
+            )}
 
           </div>
 
         </section>
 
 
-        {/* Recommendations */}
+        {/* ===================================================
+            WEAKNESSES
+            =================================================== */}
+
         <section className="analysis-section">
 
           <div className="analysis-section-title">
 
+            <div className="analysis-section-icon warning">
+              !
+            </div>
+
             <div>
-              <span className="analysis-label">
-                AI INSIGHTS
-              </span>
 
               <h2>
-                Recommendations
+                Areas to Improve
               </h2>
+
+              <p>
+                Important areas that may reduce your ATS score.
+              </p>
+
             </div>
 
           </div>
 
 
-          <div className="recommendation-grid">
+          <div className="analysis-list">
 
-            {recommendations.map((item) => (
+            {weaknesses.length > 0 ? (
 
-              <div
-                className="recommendation-card"
-                key={item.title}
-              >
+              weaknesses.map(
+                (item, index) => (
 
-                <div className="recommendation-icon">
-                  {item.icon}
-                </div>
+                  <div
+                    className="analysis-list-item weakness-item"
+                    key={index}
+                  >
 
-                <h3>
-                  {item.title}
-                </h3>
+                    <span>
+                      !
+                    </span>
+
+                    <p>
+                      {item}
+                    </p>
+
+                  </div>
+
+                )
+              )
+
+            ) : (
+
+              <div className="analysis-empty">
+                No major weaknesses detected.
+              </div>
+
+            )}
+
+          </div>
+
+        </section>
+
+
+        {/* ===================================================
+            AI RECOMMENDATIONS
+            =================================================== */}
+
+        <section className="analysis-section">
+
+          <div className="analysis-section-title">
+
+            <div className="analysis-section-icon suggestion">
+              💡
+            </div>
+
+            <div>
+
+              <h2>
+                AI Recommendations
+              </h2>
+
+              <p>
+                Suggestions to improve your resume.
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <div className="analysis-list">
+
+            {suggestions.length > 0 ? (
+
+              suggestions.map(
+                (item, index) => (
+
+                  <div
+                    className="analysis-list-item suggestion-item"
+                    key={index}
+                  >
+
+                    <span>
+                      →
+                    </span>
+
+                    <p>
+                      {item}
+                    </p>
+
+                  </div>
+
+                )
+              )
+
+            ) : (
+
+              <div className="analysis-empty">
+                No suggestions available.
+              </div>
+
+            )}
+
+          </div>
+
+        </section>
+
+
+        {/* ===================================================
+            DETECTED SKILLS
+            =================================================== */}
+
+        <section className="analysis-section">
+
+          <div className="analysis-section-title">
+
+            <div className="analysis-section-icon">
+              ⚡
+            </div>
+
+            <div>
+
+              <h2>
+                Detected Skills
+              </h2>
+
+              <p>
+                Skills identified from your resume.
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <div className="skills-container">
+
+            {skills.length > 0 ? (
+
+              skills.map(
+                (skill, index) => (
+
+                  <span
+                    className="skill-tag"
+                    key={index}
+                  >
+                    {skill}
+                  </span>
+
+                )
+              )
+
+            ) : (
+
+              <div className="analysis-empty">
+                No skills detected.
+              </div>
+
+            )}
+
+          </div>
+
+        </section>
+
+
+        {/* ===================================================
+            EDUCATION
+            =================================================== */}
+
+        {education.length > 0 && (
+
+          <section className="analysis-section">
+
+            <div className="analysis-section-title">
+
+              <div className="analysis-section-icon">
+                🎓
+              </div>
+
+              <div>
+
+                <h2>
+                  Education
+                </h2>
 
                 <p>
-                  {item.text}
+                  Education information detected from your resume.
                 </p>
 
               </div>
 
-            ))}
+            </div>
+
+
+            <div className="analysis-education-list">
+
+              {education.map(
+                (item, index) => (
+
+                  <div
+                    className="analysis-education-card"
+                    key={
+                      item?._id ||
+                      item?.id ||
+                      index
+                    }
+                  >
+
+                    <h3>
+                      {item?.degree ||
+                        item?.qualification ||
+                        "Degree"}
+                    </h3>
+
+                    <p>
+                      {item?.institution ||
+                        item?.college ||
+                        item?.university ||
+                        "Institution"}
+                    </p>
+
+                    <span>
+
+                      {item?.startYear &&
+                      item?.endYear
+                        ? `${item.startYear} - ${item.endYear}`
+                        : item?.year
+                        ? item.year
+                        : "Duration not available"}
+
+                    </span>
+
+                  </div>
+
+                )
+              )}
+
+            </div>
+
+          </section>
+
+        )}
+
+
+        {/* ===================================================
+            PERSONAL INFORMATION
+            =================================================== */}
+
+        <section className="analysis-section">
+
+          <div className="analysis-section-title">
+
+            <div className="analysis-section-icon">
+              👤
+            </div>
+
+            <div>
+
+              <h2>
+                Personal Information
+              </h2>
+
+              <p>
+                Contact details detected from your resume.
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <div className="analysis-personal-grid">
+
+            <div>
+
+              <span>
+                Name
+              </span>
+
+              <strong>
+                {resume?.personalInfo?.name ||
+                  resume?.name ||
+                  "Not available"}
+              </strong>
+
+            </div>
+
+
+            <div>
+
+              <span>
+                Email
+              </span>
+
+              <strong>
+                {resume?.personalInfo?.email ||
+                  resume?.email ||
+                  "Not available"}
+              </strong>
+
+            </div>
+
+
+            <div>
+
+              <span>
+                Phone
+              </span>
+
+              <strong>
+                {resume?.personalInfo?.phone ||
+                  resume?.phone ||
+                  "Not available"}
+              </strong>
+
+            </div>
+
+
+            <div>
+
+              <span>
+                Location
+              </span>
+
+              <strong>
+                {resume?.personalInfo?.location ||
+                  resume?.location ||
+                  "Not available"}
+              </strong>
+
+            </div>
 
           </div>
 
         </section>
 
 
-        {/* Bottom actions */}
-        <div className="analysis-actions">
+        {/* ===================================================
+            ACTIONS
+            =================================================== */}
 
-          <Link
-            to="/upload-resume"
-            className="secondary-analysis-btn"
+        <section className="analysis-actions">
+
+          <button
+            className="analysis-primary-btn"
+            onClick={() =>
+              navigate("/upload-resume")
+            }
           >
-            ← Upload Another Resume
-          </Link>
+            Analyze Another Resume
 
-          <Link
-            to="/interview"
-            className="primary-analysis-btn"
+            <span>
+              →
+            </span>
+
+          </button>
+
+
+          <button
+            className="analysis-secondary-btn"
+            onClick={() =>
+              navigate("/dashboard")
+            }
           >
-            Start Interview Prep
-            <span>→</span>
-          </Link>
+            Back to Dashboard
+          </button>
 
-        </div>
+        </section>
 
       </main>
 
@@ -462,4 +885,4 @@ function Analysis() {
   );
 }
 
-export default Analysis;
+export default Analysis;  

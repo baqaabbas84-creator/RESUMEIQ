@@ -1,237 +1,616 @@
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+
+import {
+  getInterviewById,
+  getSavedInterviewId,
+} from "../../services/interviewService";
 
 function InterviewResult() {
+  const navigate = useNavigate();
+
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // =========================================================
+  // LOAD RESULT FROM BACKEND
+  // =========================================================
+
+  useEffect(() => {
+    const loadResult = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        // First get saved interview ID
+        const interviewId =
+          getSavedInterviewId();
+
+        // If no ID exists, fallback to sessionStorage
+        if (!interviewId) {
+          const storedResult =
+            sessionStorage.getItem(
+              "interviewResult"
+            );
+
+          if (storedResult) {
+            try {
+              const parsedResult =
+                JSON.parse(
+                  storedResult
+                );
+
+              setResult(parsedResult);
+              return;
+            } catch (parseError) {
+              console.error(
+                "Failed to parse stored result:",
+                parseError
+              );
+            }
+          }
+
+          navigate("/interview");
+          return;
+        }
+
+        // =====================================================
+        // GET INTERVIEW FROM BACKEND
+        // =====================================================
+
+        const response =
+          await getInterviewById(
+            interviewId
+          );
+
+        console.log(
+          "Interview result loaded:",
+          response
+        );
+
+        const interviewData =
+          response?.interview ||
+          response;
+
+        if (!interviewData) {
+          throw new Error(
+            "Interview result was not found."
+          );
+        }
+
+        setResult(
+          interviewData
+        );
+
+        // Keep sessionStorage as a temporary cache
+        sessionStorage.setItem(
+          "interviewResult",
+          JSON.stringify(
+            interviewData
+          )
+        );
+
+      } catch (err) {
+        console.error(
+          "Failed to load interview result:",
+          err
+        );
+
+        // =====================================================
+        // FALLBACK TO SESSION STORAGE
+        // =====================================================
+
+        const storedResult =
+          sessionStorage.getItem(
+            "interviewResult"
+          );
+
+        if (storedResult) {
+          try {
+            const parsedResult =
+              JSON.parse(
+                storedResult
+              );
+
+            setResult(parsedResult);
+            return;
+          } catch (parseError) {
+            console.error(
+              "Fallback result parsing failed:",
+              parseError
+            );
+          }
+        }
+
+        setError(
+          err?.response?.data?.message ||
+            err?.message ||
+            "Failed to load interview result."
+        );
+
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadResult();
+  }, [navigate]);
+
+  // =========================================================
+  // LOADING
+  // =========================================================
+
+  if (loading) {
+    return (
+      <div className="interview-result-loading">
+        Loading result...
+      </div>
+    );
+  }
+
+  // =========================================================
+  // ERROR
+  // =========================================================
+
+  if (error && !result) {
+    return (
+      <div className="interview-result-loading">
+
+        <p>
+          {error}
+        </p>
+
+        <button
+          type="button"
+          className="practice-again-btn"
+          onClick={() =>
+            navigate("/interview")
+          }
+        >
+          Start Interview
+          <span>
+            →
+          </span>
+        </button>
+
+      </div>
+    );
+  }
+
+  // =========================================================
+  // NO RESULT
+  // =========================================================
+
+  if (!result) {
+    return (
+      <div className="interview-result-loading">
+        No interview result found.
+      </div>
+    );
+  }
+
+  // =========================================================
+  // SCORE
+  // =========================================================
+
+  const score =
+    Number(result.totalScore) || 0;
+
+  // =========================================================
+  // PERFORMANCE
+  // =========================================================
+
+  const getPerformance = () => {
+    if (score >= 85) {
+      return {
+        title:
+          "Excellent Performance!",
+        description:
+          "Your interview performance was excellent. Keep practicing to maintain your confidence.",
+        className:
+          "excellent",
+      };
+    }
+
+    if (score >= 70) {
+      return {
+        title:
+          "Good Performance!",
+        description:
+          "You performed well. A little more practice can make your answers even stronger.",
+        className:
+          "good",
+      };
+    }
+
+    if (score >= 50) {
+      return {
+        title:
+          "Keep Practicing!",
+        description:
+          "You have a good foundation. Focus on improving your explanations and technical depth.",
+        className:
+          "average",
+      };
+    }
+
+    return {
+      title:
+        "Needs Improvement",
+      description:
+        "Keep practicing and work on giving clearer, more detailed answers.",
+      className:
+        "needs-improvement",
+    };
+  };
+
+  const performance =
+    getPerformance();
+
+  // =========================================================
+  // PRACTICE AGAIN
+  // =========================================================
+
+  const handlePracticeAgain = () => {
+    sessionStorage.removeItem(
+      "interviewResult"
+    );
+
+    localStorage.removeItem(
+      "currentInterviewId"
+    );
+
+    navigate("/interview");
+  };
+
+  // =========================================================
+  // FORMAT DATE
+  // =========================================================
+
+  const formatDate = (date) => {
+    if (!date) {
+      return null;
+    }
+
+    try {
+      return new Date(
+        date
+      ).toLocaleString(
+        "en-IN",
+        {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }
+      );
+    } catch {
+      return null;
+    }
+  };
+
+  const completedDate =
+    formatDate(
+      result.completedAt ||
+        result.updatedAt
+    );
+
+  // =========================================================
+  // RENDER
+  // =========================================================
+
   return (
     <div className="interview-result-page">
 
-      <nav className="dashboard-navbar">
+      {/* =====================================================
+          NAVBAR
+      ===================================================== */}
 
-        <Link to="/" className="dashboard-logo">
+      <nav className="interview-result-navbar">
+
+        <Link
+          to="/"
+          className="dashboard-logo"
+        >
           Resume<span>IQ</span>
         </Link>
 
-        <div className="dashboard-nav-links">
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/analysis">Analysis</Link>
-          <Link to="/history">History</Link>
-          <Link to="/profile">Profile</Link>
+        <div className="interview-result-nav-links">
+
+          <Link to="/dashboard">
+            Dashboard
+          </Link>
+
+          <Link to="/history">
+            History
+          </Link>
+
+          <Link to="/profile">
+            Profile
+          </Link>
+
         </div>
 
       </nav>
 
 
-      <main className="result-container">
+      {/* =====================================================
+          MAIN
+      ===================================================== */}
 
-        <div className="result-header">
+      <main className="interview-result-container">
 
-          <span className="upload-badge">
-            Interview Completed
-          </span>
+        {/* ===================================================
+            HEADER
+        =================================================== */}
+
+        <section className="result-header">
 
           <div className="result-success-icon">
             ✓
           </div>
 
+          <span className="result-badge">
+            Interview Completed
+          </span>
+
           <h1>
-            Great Job! 🎉
+            Your Interview Results
           </h1>
 
           <p>
-            You've completed your mock interview.
-            Here's your performance summary.
+            Here is a detailed breakdown of
+            your interview performance.
           </p>
 
-        </div>
+        </section>
 
 
-        {/* Score */}
-        <section className="result-score-card">
+        {/* ===================================================
+            SCORE CARD
+        =================================================== */}
 
-          <div className="result-score-circle">
+        <section
+          className={`result-score-card ${performance.className}`}
+        >
 
-            <div>
-              <strong>82</strong>
-              <span>/ 100</span>
+          <div className="score-circle">
+
+            <div className="score-number">
+              {score}
+            </div>
+
+            <div className="score-label">
+              / 100
             </div>
 
           </div>
 
-          <div className="result-score-info">
 
-            <span className="analysis-label">
-              OVERALL SCORE
+          <div className="score-information">
+
+            <span className="result-performance-label">
+              {result.jobRole ||
+                "Interview"}
             </span>
 
             <h2>
-              Good Performance
+              {performance.title}
             </h2>
 
             <p>
-              You have a solid understanding of the
-              core concepts. Keep practicing to improve
-              your interview confidence.
+              {performance.description}
             </p>
 
-          </div>
+            <div className="result-meta">
 
-        </section>
+              <span>
+                🎯{" "}
+                {result.difficulty ||
+                  "Medium"}
+              </span>
 
+              <span>
+                ❓{" "}
+                {result.questions?.length ||
+                  0}{" "}
+                Questions
+              </span>
 
-        {/* Stats */}
-        <section className="result-stats">
+              <span>
+                ✓ Completed
+              </span>
 
-          <div className="result-stat-card">
-            <span>✓</span>
-            <strong>4</strong>
-            <p>Correct Answers</p>
-          </div>
-
-          <div className="result-stat-card">
-            <span>💬</span>
-            <strong>5</strong>
-            <p>Total Questions</p>
-          </div>
-
-          <div className="result-stat-card">
-            <span>⏱️</span>
-            <strong>18</strong>
-            <p>Minutes</p>
-          </div>
-
-          <div className="result-stat-card">
-            <span>🎯</span>
-            <strong>82%</strong>
-            <p>Accuracy</p>
-          </div>
-
-        </section>
-
-
-        {/* Performance */}
-        <section className="result-section">
-
-          <div className="result-section-title">
-
-            <span className="analysis-label">
-              PERFORMANCE
-            </span>
-
-            <h2>
-              Your Strengths
-            </h2>
-
-          </div>
-
-
-          <div className="result-strengths">
-
-            <div className="strength-card">
-              <div>💻</div>
-              <h3>Technical Knowledge</h3>
-              <p>
-                You demonstrated a good understanding
-                of programming concepts.
-              </p>
             </div>
 
-            <div className="strength-card">
-              <div>🧠</div>
-              <h3>Problem Solving</h3>
-              <p>
-                Your answers showed logical thinking
-                and structured problem solving.
-              </p>
-            </div>
-
-            <div className="strength-card">
-              <div>⚡</div>
-              <h3>Confidence</h3>
-              <p>
-                Your responses were clear and focused
-                on the question.
-              </p>
-            </div>
-
-          </div>
-
-        </section>
-
-
-        {/* Improvements */}
-        <section className="result-section">
-
-          <div className="result-section-title">
-
-            <span className="analysis-label">
-              AI FEEDBACK
-            </span>
-
-            <h2>
-              Areas to Improve
-            </h2>
-
-          </div>
-
-
-          <div className="improvement-list">
-
-            <div className="improvement-item">
-              <span>01</span>
-              <div>
-                <h3>Spring Boot</h3>
-                <p>
-                  Practice dependency injection,
-                  Spring Security and REST API concepts.
-                </p>
+            {completedDate && (
+              <div className="result-meta">
+                <span>
+                  🕒 {completedDate}
+                </span>
               </div>
-            </div>
-
-            <div className="improvement-item">
-              <span>02</span>
-              <div>
-                <h3>System Design</h3>
-                <p>
-                  Improve your understanding of scalable
-                  application architecture.
-                </p>
-              </div>
-            </div>
-
-            <div className="improvement-item">
-              <span>03</span>
-              <div>
-                <h3>Communication</h3>
-                <p>
-                  Try to give more structured answers
-                  with examples from real projects.
-                </p>
-              </div>
-            </div>
+            )}
 
           </div>
 
         </section>
 
 
-        {/* Actions */}
-        <div className="result-actions">
+        {/* ===================================================
+            QUESTION RESULTS
+        =================================================== */}
 
-          <Link
-            to="/interview"
-            className="secondary-analysis-btn"
+        <section className="question-results-section">
+
+          <div className="result-section-heading">
+
+            <div>
+
+              <h2>
+                Question-wise Feedback
+              </h2>
+
+              <p>
+                Review your answers and improve
+                your weak areas.
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <div className="question-results-list">
+
+            {result.questions?.map(
+              (
+                question,
+                index
+              ) => {
+
+                const questionScore =
+                  Number(
+                    question.score
+                  ) || 0;
+
+                return (
+                  <article
+                    className="result-question-card"
+                    key={
+                      question._id ||
+                      index
+                    }
+                  >
+
+                    {/* =====================================
+                        QUESTION TOP
+                    ===================================== */}
+
+                    <div className="result-question-top">
+
+                      <div className="result-question-number">
+                        {index + 1}
+                      </div>
+
+                      <div className="result-question-content">
+
+                        <span className="result-question-category">
+                          {question.category ||
+                            "General"}
+                        </span>
+
+                        <h3>
+                          {question.question}
+                        </h3>
+
+                      </div>
+
+                      <div
+                        className={`question-score ${
+                          questionScore >= 8
+                            ? "high"
+                            : questionScore >= 6
+                            ? "medium"
+                            : "low"
+                        }`}
+                      >
+
+                        {questionScore}
+
+                        <small>
+                          /10
+                        </small>
+
+                      </div>
+
+                    </div>
+
+
+                    {/* =====================================
+                        ANSWER
+                    ===================================== */}
+
+                    <div className="result-answer-box">
+
+                      <div className="result-answer-heading">
+                        Your Answer
+                      </div>
+
+                      <p>
+                        {question.answer ||
+                          "No answer provided."}
+                      </p>
+
+                    </div>
+
+
+                    {/* =====================================
+                        FEEDBACK
+                    ===================================== */}
+
+                    <div className="result-feedback-box">
+
+                      <div className="result-feedback-icon">
+                        💡
+                      </div>
+
+                      <div>
+
+                        <strong>
+                          AI Feedback
+                        </strong>
+
+                        <p>
+                          {question.feedback ||
+                            "No feedback available."}
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                  </article>
+                );
+              }
+            )}
+
+          </div>
+
+        </section>
+
+
+        {/* ===================================================
+            ACTIONS
+        =================================================== */}
+
+        <section className="result-actions">
+
+          <button
+            type="button"
+            className="practice-again-btn"
+            onClick={
+              handlePracticeAgain
+            }
           >
-            ↻ Try Again
-          </Link>
+            Practice Again
+
+            <span>
+              →
+            </span>
+
+          </button>
+
 
           <Link
             to="/dashboard"
-            className="primary-analysis-btn"
+            className="result-dashboard-btn"
           >
             Back to Dashboard
-            <span>→</span>
           </Link>
 
-        </div>
+        </section>
 
       </main>
 

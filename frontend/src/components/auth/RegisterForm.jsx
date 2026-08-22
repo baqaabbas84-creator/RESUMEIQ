@@ -1,7 +1,11 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
-function Register() {
+function RegisterForm() {
+  const navigate = useNavigate();
+  const { register, loading } = useAuth();
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -22,7 +26,7 @@ function Register() {
     setError("");
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (
@@ -45,57 +49,56 @@ function Register() {
       return;
     }
 
-    alert("Registration form is working!");
+    try {
+      await register(
+        formData.name,
+        formData.email,
+        formData.password
+      );
+
+      navigate("/dashboard");
+    } catch (error) {
+      setError(
+        error.response?.data?.message ||
+        "Registration failed. Please try again."
+      );
+    }
   };
 
   return (
     <div className="auth-page">
-
-      {/* Background decoration */}
       <div className="auth-orb auth-orb-one"></div>
       <div className="auth-orb auth-orb-two"></div>
       <div className="auth-orb auth-orb-three"></div>
 
       <div className="auth-card register-card">
 
-        {/* Logo */}
         <Link to="/" className="auth-logo">
           Resume<span>IQ</span>
         </Link>
 
-        {/* Header */}
         <div className="auth-header">
-
-          <div className="auth-icon">
-            ✨
-          </div>
+          <div className="auth-icon">✨</div>
 
           <h1>Create Account</h1>
 
           <p>
             Start your journey towards a better career.
           </p>
-
         </div>
 
-
-        {/* Error */}
         {error && (
           <div className="form-error">
             {error}
           </div>
         )}
 
-
-        {/* Form */}
         <form
           className="auth-form"
           onSubmit={handleSubmit}
         >
 
-          {/* Name */}
           <div className="form-group">
-
             <label htmlFor="name">
               Full Name
             </label>
@@ -108,13 +111,9 @@ function Register() {
               value={formData.name}
               onChange={handleChange}
             />
-
           </div>
 
-
-          {/* Email */}
           <div className="form-group">
-
             <label htmlFor="email">
               Email Address
             </label>
@@ -127,13 +126,9 @@ function Register() {
               value={formData.email}
               onChange={handleChange}
             />
-
           </div>
 
-
-          {/* Password */}
           <div className="form-group">
-
             <label htmlFor="password">
               Password
             </label>
@@ -146,13 +141,9 @@ function Register() {
               value={formData.password}
               onChange={handleChange}
             />
-
           </div>
 
-
-          {/* Confirm Password */}
           <div className="form-group">
-
             <label htmlFor="confirmPassword">
               Confirm Password
             </label>
@@ -165,23 +156,19 @@ function Register() {
               value={formData.confirmPassword}
               onChange={handleChange}
             />
-
           </div>
 
-
-          {/* Button */}
           <button
             type="submit"
             className="auth-btn"
+            disabled={loading}
           >
-            Create Account
-            <span>→</span>
+            {loading ? "Creating Account..." : "Create Account"}
+            {!loading && <span>→</span>}
           </button>
 
         </form>
 
-
-        {/* Footer */}
         <div className="auth-footer">
 
           <p>
@@ -201,9 +188,8 @@ function Register() {
         </div>
 
       </div>
-
     </div>
   );
 }
 
-export default Register;
+export default RegisterForm;

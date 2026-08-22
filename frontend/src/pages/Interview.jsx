@@ -1,100 +1,450 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+
+import {
+  createInterview,
+  submitInterview,
+  saveInterviewId,
+} from "../services/interviewService";
+
+import {
+  getLatestResume,
+} from "../services/resumeService";
 
 function Interview() {
   const navigate = useNavigate();
 
-  const [started, setStarted] = useState(false);
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answer, setAnswer] = useState("");
+  // =========================================================
+  // SETUP STATE
+  // =========================================================
 
-  const [role, setRole] = useState("Software Developer");
-  const [difficulty, setDifficulty] = useState("Medium");
+  const [jobRole, setJobRole] = useState("");
+  const [difficulty, setDifficulty] =
+    useState("Medium");
 
-  const questions = [
-    {
-      question:
-        "Explain the difference between an interface and an abstract class in Java.",
-      category: "Java",
-    },
-    {
-      question:
-        "What is dependency injection in Spring Boot and why is it useful?",
-      category: "Spring Boot",
-    },
-    {
-      question:
-        "What is the difference between SQL JOIN and UNION?",
-      category: "SQL",
-    },
-    {
-      question:
-        "How would you improve the performance of a React application?",
-      category: "React",
-    },
-    {
-      question:
-        "Explain how REST APIs work and what HTTP methods are commonly used.",
-      category: "Backend",
-    },
+  // =========================================================
+  // RESUME STATE
+  // =========================================================
+
+  const [resume, setResume] = useState(null);
+  const [resumeLoading, setResumeLoading] =
+    useState(true);
+
+  // =========================================================
+  // INTERVIEW STATE
+  // =========================================================
+
+  const [interview, setInterview] =
+    useState(null);
+
+  const [currentQuestion, setCurrentQuestion] =
+    useState(0);
+
+  const [answers, setAnswers] =
+    useState([]);
+
+  // =========================================================
+  // UI STATE
+  // =========================================================
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [submitting, setSubmitting] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  // =========================================================
+  // OPTIONS
+  // =========================================================
+
+  const jobRoles = [
+    "Software Developer",
+    "Frontend Developer",
+    "Backend Developer",
+    "AI/ML Engineer",
   ];
 
-  const handleStart = () => {
-    setStarted(true);
-    setCurrentQuestion(0);
-    setAnswer("");
-  };
+  const difficulties = [
+    "Easy",
+    "Medium",
+    "Hard",
+  ];
 
-  const handleNext = () => {
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion((previous) => previous + 1);
-      setAnswer("");
+  // =========================================================
+  // LOAD LATEST RESUME
+  // =========================================================
+
+  useEffect(() => {
+    const loadResume = async () => {
+      try {
+        setResumeLoading(true);
+
+        const latestResume =
+          await getLatestResume();
+
+        setResume(latestResume);
+      } catch (err) {
+        console.error(
+          "Failed to load latest resume:",
+          err
+        );
+
+        setResume(null);
+      } finally {
+        setResumeLoading(false);
+      }
+    };
+
+    loadResume();
+  }, []);
+
+  // =========================================================
+  // START INTERVIEW
+  // =========================================================
+
+  const handleStartInterview = async (
+    event
+  ) => {
+    event.preventDefault();
+
+    if (!jobRole) {
+      setError(
+        "Please select a job role."
+      );
       return;
     }
 
-    // LAST QUESTION
-    navigate("/interview/result");
+    setError("");
+    setLoading(true);
+
+    try {
+      // -------------------------------------------------------
+      // Resume ID
+      // -------------------------------------------------------
+
+      const resumeId =
+        resume?._id || null;
+
+      // -------------------------------------------------------
+      // Create interview
+      // -------------------------------------------------------
+
+      const response =
+        await createInterview({
+          jobRole,
+          difficulty,
+          resumeId,
+        });
+
+      console.log(
+        "Interview created:",
+        response
+      );
+
+      const createdInterview =
+        response?.interview;
+
+      if (!createdInterview?._id) {
+        throw new Error(
+          "Interview ID was not returned by the server."
+        );
+      }
+
+      if (
+        !Array.isArray(
+          createdInterview.questions
+        ) ||
+        createdInterview.questions.length === 0
+      ) {
+        throw new Error(
+          "No interview questions were returned."
+        );
+      }
+
+      // -------------------------------------------------------
+      // Save interview
+      // -------------------------------------------------------
+
+      setInterview(
+        createdInterview
+      );
+
+      saveInterviewId(
+        createdInterview._id
+      );
+
+      // -------------------------------------------------------
+      // Reset question
+      // -------------------------------------------------------
+
+      setCurrentQuestion(0);
+
+      // -------------------------------------------------------
+      // Create empty answers
+      // -------------------------------------------------------
+
+      setAnswers(
+        new Array(
+          createdInterview.questions.length
+        ).fill("")
+      );
+
+    } catch (err) {
+      console.error(
+        "Start interview error:",
+        err
+      );
+
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to start interview."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
-    <div className="interview-page">
+  // =========================================================
+  // ANSWER CHANGE
+  // =========================================================
 
-      <nav className="dashboard-navbar">
+  const handleAnswerChange = (
+    event
+  ) => {
+    const value =
+      event.target.value;
 
-        <Link to="/" className="dashboard-logo">
-          Resume<span>IQ</span>
-        </Link>
+    setAnswers((previous) => {
+      const updated = [...previous];
 
-        <div className="dashboard-nav-links">
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/analysis">Analysis</Link>
-          <Link to="/history">History</Link>
-          <Link to="/profile">Profile</Link>
-        </div>
+      updated[currentQuestion] =
+        value;
 
-      </nav>
+      return updated;
+    });
 
+    setError("");
+  };
 
-      {!started ? (
+  // =========================================================
+  // NEXT QUESTION
+  // =========================================================
 
-        <main className="interview-container">
+  const handleNext = () => {
+    if (!interview) {
+      return;
+    }
 
-          <div className="interview-header">
+    const currentAnswer =
+      answers[currentQuestion]?.trim();
 
-            <span className="upload-badge">
-              AI Interview Preparation
-            </span>
+    if (!currentAnswer) {
+      setError(
+        "Please answer this question before continuing."
+      );
 
-            <h1>
-              Prepare for Your Interview
-            </h1>
+      return;
+    }
 
-            <p>
-              Practice interview questions based on your target role.
-            </p>
+    setError("");
+
+    if (
+      currentQuestion <
+      interview.questions.length - 1
+    ) {
+      setCurrentQuestion(
+        (previous) =>
+          previous + 1
+      );
+    }
+  };
+
+  // =========================================================
+  // PREVIOUS QUESTION
+  // =========================================================
+
+  const handlePrevious = () => {
+    if (currentQuestion > 0) {
+      setError("");
+
+      setCurrentQuestion(
+        (previous) =>
+          previous - 1
+      );
+    }
+  };
+
+  // =========================================================
+  // GO TO QUESTION
+  // =========================================================
+
+  const handleQuestionChange = (
+    index
+  ) => {
+    setError("");
+
+    setCurrentQuestion(index);
+  };
+
+  // =========================================================
+  // SUBMIT INTERVIEW
+  // =========================================================
+
+  const handleSubmit = async () => {
+    if (!interview) {
+      return;
+    }
+
+    const incomplete =
+      answers.some(
+        (answer) =>
+          !answer ||
+          !answer.trim()
+      );
+
+    if (incomplete) {
+      setError(
+        "Please answer all questions before submitting."
+      );
+
+      return;
+    }
+
+    setError("");
+    setSubmitting(true);
+
+    try {
+      const response =
+        await submitInterview(
+          interview._id,
+          answers
+        );
+
+      console.log(
+        "Interview submitted:",
+        response
+      );
+
+      // -------------------------------------------------------
+      // Save result
+      // -------------------------------------------------------
+
+      if (response?.interview) {
+        sessionStorage.setItem(
+          "interviewResult",
+          JSON.stringify(
+            response.interview
+          )
+        );
+      }
+
+      navigate(
+        "/interview/result"
+      );
+
+    } catch (err) {
+      console.error(
+        "Submit interview error:",
+        err
+      );
+
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to submit interview."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // =========================================================
+  // START OVER
+  // =========================================================
+
+  const handleStartOver = () => {
+    setInterview(null);
+    setCurrentQuestion(0);
+    setAnswers([]);
+    setError("");
+  };
+
+  // =========================================================
+  // SETUP PAGE
+  // =========================================================
+
+  if (!interview) {
+    return (
+      <div className="interview-page">
+
+        {/* ================= NAVBAR ================= */}
+
+        <nav className="interview-navbar">
+
+          <Link
+            to="/"
+            className="dashboard-logo"
+          >
+            Resume<span>IQ</span>
+          </Link>
+
+          <div className="interview-nav-links">
+
+            <Link to="/dashboard">
+              Dashboard
+            </Link>
+
+            <Link to="/history">
+              History
+            </Link>
+
+            <Link
+              to="/interview"
+              className="active"
+            >
+              Interview
+            </Link>
+
+            <Link to="/profile">
+              Profile
+            </Link>
 
           </div>
 
+        </nav>
+
+
+        {/* ================= MAIN ================= */}
+
+        <main className="interview-container">
+
+          {/* HERO */}
+
+          <section className="interview-hero">
+
+            <span className="interview-badge">
+              AI Interview Practice
+            </span>
+
+            <h1>
+              Practice Your Interview
+            </h1>
+
+            <p>
+              Prepare for your next opportunity
+              with AI-powered interview practice.
+              Choose your role and difficulty level
+              to get started.
+            </p>
+
+          </section>
+
+
+          {/* SETUP CARD */}
 
           <section className="interview-setup-card">
 
@@ -103,193 +453,240 @@ function Interview() {
             </div>
 
             <h2>
-              Start Mock Interview
+              Configure Your Interview
             </h2>
 
-            <p>
-              Choose your preferences and start practicing.
+            <p className="interview-setup-description">
+              Select the role you are preparing
+              for and choose your preferred
+              difficulty level.
             </p>
 
 
-            <div className="interview-form">
-
-              <div className="interview-field">
-
-                <label>
-                  Target Job Role
-                </label>
-
-                <select
-                  value={role}
-                  onChange={(event) =>
-                    setRole(event.target.value)
-                  }
-                >
-                  <option>Software Developer</option>
-                  <option>Java Developer</option>
-                  <option>Full Stack Developer</option>
-                  <option>Frontend Developer</option>
-                  <option>Backend Developer</option>
-                </select>
-
-              </div>
-
-
-              <div className="interview-field">
-
-                <label>
-                  Difficulty
-                </label>
-
-                <select
-                  value={difficulty}
-                  onChange={(event) =>
-                    setDifficulty(event.target.value)
-                  }
-                >
-                  <option>Easy</option>
-                  <option>Medium</option>
-                  <option>Hard</option>
-                </select>
-
-              </div>
-
-            </div>
-
-
-            <div className="interview-info">
-
-              <div>
-                <strong>5</strong>
-                <span>Questions</span>
-              </div>
-
-              <div>
-                <strong>{difficulty}</strong>
-                <span>Difficulty</span>
-              </div>
-
-              <div>
-                <strong>AI</strong>
-                <span>Powered</span>
-              </div>
-
-            </div>
-
-
-            <button
-              type="button"
-              className="start-interview-btn"
-              onClick={handleStart}
+            <form
+              className="interview-form"
+              onSubmit={
+                handleStartInterview
+              }
             >
-              Start Interview
-              <span>→</span>
-            </button>
+
+              {/* JOB ROLE */}
+
+              <div className="interview-form-group">
+
+                <label htmlFor="jobRole">
+                  Job Role
+                </label>
+
+                <select
+                  id="jobRole"
+                  value={jobRole}
+                  onChange={(event) => {
+                    setJobRole(
+                      event.target.value
+                    );
+
+                    setError("");
+                  }}
+                >
+
+                  <option value="">
+                    Select a job role
+                  </option>
+
+                  {jobRoles.map(
+                    (role) => (
+                      <option
+                        key={role}
+                        value={role}
+                      >
+                        {role}
+                      </option>
+                    )
+                  )}
+
+                </select>
+
+              </div>
+
+
+              {/* DIFFICULTY */}
+
+              <div className="interview-form-group">
+
+                <label>
+                  Difficulty Level
+                </label>
+
+                <div className="difficulty-grid">
+
+                  {difficulties.map(
+                    (level) => (
+                      <button
+                        key={level}
+                        type="button"
+                        className={
+                          difficulty === level
+                            ? "difficulty-option active"
+                            : "difficulty-option"
+                        }
+                        onClick={() => {
+                          setDifficulty(
+                            level
+                          );
+
+                          setError("");
+                        }}
+                      >
+                        {level}
+                      </button>
+                    )
+                  )}
+
+                </div>
+
+              </div>
+
+
+              {/* RESUME INFORMATION */}
+
+              <div className="interview-resume-info">
+
+                <span>
+                  📄
+                </span>
+
+                <div>
+
+                  <strong>
+                    Resume-Based Practice
+                  </strong>
+
+                  {resumeLoading ? (
+
+                    <p>
+                      Checking your latest resume...
+                    </p>
+
+                  ) : resume ? (
+
+                    <p>
+                      <strong>
+                        {resume.personalInfo?.name ||
+                          resume.title ||
+                          "Latest Resume"}
+                      </strong>
+                      {" "}will be connected to this interview.
+                    </p>
+
+                  ) : (
+
+                    <p>
+                      No resume found. You can still
+                      practice role-specific questions.
+                    </p>
+
+                  )}
+
+                </div>
+
+              </div>
+
+
+              {/* ERROR */}
+
+              {error && (
+                <div className="interview-error">
+                  ⚠️ {error}
+                </div>
+              )}
+
+
+              {/* START BUTTON */}
+
+              <button
+                type="submit"
+                className="start-interview-btn"
+                disabled={
+                  loading ||
+                  resumeLoading
+                }
+              >
+
+                {loading
+                  ? "Creating Interview..."
+                  : resumeLoading
+                  ? "Loading Resume..."
+                  : "Start Interview"}
+
+                {!loading &&
+                  !resumeLoading && (
+                    <span>
+                      →
+                    </span>
+                  )}
+
+              </button>
+
+            </form>
 
           </section>
 
-        </main>
 
-      ) : (
+          {/* FEATURES */}
 
-        <main className="interview-container">
-
-          <div className="interview-progress">
+          <section className="interview-features">
 
             <div>
 
               <span>
-                Question {currentQuestion + 1} of{" "}
-                {questions.length}
+                🎯
               </span>
 
-              <strong>
-                {role}
-              </strong>
+              <h3>
+                Role Focused
+              </h3>
 
-            </div>
-
-            <div className="progress-track">
-
-              <div
-                style={{
-                  width: `${
-                    ((currentQuestion + 1) /
-                      questions.length) *
-                    100
-                  }%`,
-                }}
-              ></div>
-
-            </div>
-
-          </div>
-
-
-          <section className="question-card">
-
-            <div className="question-top">
-
-              <span className="question-category">
-                {questions[currentQuestion].category}
-              </span>
-
-              <span className="question-difficulty">
-                {difficulty}
-              </span>
+              <p>
+                Practice questions designed
+                around your selected role.
+              </p>
 
             </div>
 
 
-            <h1>
-              {questions[currentQuestion].question}
-            </h1>
-
-
-            <div className="answer-area">
-
-              <label>
-                Your Answer
-              </label>
-
-              <textarea
-                value={answer}
-                onChange={(event) =>
-                  setAnswer(event.target.value)
-                }
-                placeholder="Write your answer here..."
-              />
+            <div>
 
               <span>
-                {answer.length} characters
+                🧠
               </span>
+
+              <h3>
+                Skill Assessment
+              </h3>
+
+              <p>
+                Test your technical and
+                problem-solving abilities.
+              </p>
 
             </div>
 
 
-            <div className="question-actions">
+            <div>
 
-              <button
-                type="button"
-                className="skip-question-btn"
-                onClick={handleNext}
-              >
-                Skip
-              </button>
+              <span>
+                📊
+              </span>
 
+              <h3>
+                Instant Feedback
+              </h3>
 
-              <button
-                type="button"
-                className="next-question-btn"
-                onClick={handleNext}
-              >
-                {currentQuestion === questions.length - 1
-                  ? "Finish Interview"
-                  : "Next Question"}
-
-                <span>→</span>
-
-              </button>
+              <p>
+                Receive a score and feedback
+                after completing the interview.
+              </p>
 
             </div>
 
@@ -297,7 +694,271 @@ function Interview() {
 
         </main>
 
-      )}
+      </div>
+    );
+  }
+
+
+  // =========================================================
+  // QUESTION DATA
+  // =========================================================
+
+  const question =
+    interview.questions[
+      currentQuestion
+    ];
+
+  const totalQuestions =
+    interview.questions.length;
+
+  const progress =
+    ((currentQuestion + 1) /
+      totalQuestions) *
+    100;
+
+  const isLastQuestion =
+    currentQuestion ===
+    totalQuestions - 1;
+
+
+  // =========================================================
+  // QUESTION PAGE
+  // =========================================================
+
+  return (
+    <div className="interview-page">
+
+      {/* ================= NAVBAR ================= */}
+
+      <nav className="interview-navbar">
+
+        <Link
+          to="/"
+          className="dashboard-logo"
+        >
+          Resume<span>IQ</span>
+        </Link>
+
+        <div className="interview-nav-links">
+
+          <span className="interview-role-label">
+            {interview.jobRole}
+          </span>
+
+          <button
+            type="button"
+            className="exit-interview-btn"
+            onClick={
+              handleStartOver
+            }
+          >
+            Exit
+          </button>
+
+        </div>
+
+      </nav>
+
+
+      {/* ================= QUESTION MAIN ================= */}
+
+      <main className="interview-question-container">
+
+        {/* PROGRESS */}
+
+        <div className="interview-progress-section">
+
+          <div className="interview-progress-info">
+
+            <span>
+              Question{" "}
+              {currentQuestion + 1}{" "}
+              of{" "}
+              {totalQuestions}
+            </span>
+
+            <span>
+              {interview.difficulty}
+            </span>
+
+          </div>
+
+          <div className="interview-progress-bar">
+
+            <div
+              className="interview-progress-fill"
+              style={{
+                width: `${progress}%`,
+              }}
+            />
+
+          </div>
+
+        </div>
+
+
+        {/* QUESTION CARD */}
+
+        <section className="interview-question-card">
+
+          {/* CATEGORY */}
+
+          <div className="question-category">
+            {question?.category ||
+              "General"}
+          </div>
+
+
+          {/* QUESTION */}
+
+          <h1>
+            {question?.question ||
+              "Question unavailable"}
+          </h1>
+
+
+          <p className="question-helper">
+            Take your time and provide a clear,
+            structured answer. Include examples
+            whenever possible.
+          </p>
+
+
+          {/* ANSWER */}
+
+          <textarea
+            className="interview-answer-input"
+            placeholder="Type your answer here..."
+            value={
+              answers[currentQuestion] ||
+              ""
+            }
+            onChange={
+              handleAnswerChange
+            }
+            rows={10}
+          />
+
+
+          {/* ERROR */}
+
+          {error && (
+            <div className="interview-error">
+              ⚠️ {error}
+            </div>
+          )}
+
+
+          {/* ACTIONS */}
+
+          <div className="interview-question-actions">
+
+            <button
+              type="button"
+              className="previous-question-btn"
+              disabled={
+                currentQuestion === 0
+              }
+              onClick={
+                handlePrevious
+              }
+            >
+              ← Previous
+            </button>
+
+
+            {!isLastQuestion ? (
+
+              <button
+                type="button"
+                className="next-question-btn"
+                onClick={
+                  handleNext
+                }
+              >
+                Next Question
+
+                <span>
+                  →
+                </span>
+
+              </button>
+
+            ) : (
+
+              <button
+                type="button"
+                className="submit-interview-btn"
+                disabled={submitting}
+                onClick={
+                  handleSubmit
+                }
+              >
+
+                {submitting
+                  ? "Submitting..."
+                  : "Submit Interview"}
+
+                {!submitting && (
+                  <span>
+                    ✓
+                  </span>
+                )}
+
+              </button>
+
+            )}
+
+          </div>
+
+        </section>
+
+
+        {/* QUESTION NUMBERS */}
+
+        <div className="question-navigation">
+
+          {interview.questions.map(
+            (item, index) => {
+
+              const answered =
+                answers[index]?.trim();
+
+              return (
+                <button
+                  key={
+                    item._id || index
+                  }
+                  type="button"
+                  className={`
+                    question-number
+                    ${
+                      index ===
+                      currentQuestion
+                        ? "active"
+                        : ""
+                    }
+                    ${
+                      answered
+                        ? "answered"
+                        : ""
+                    }
+                  `}
+                  onClick={() =>
+                    handleQuestionChange(
+                      index
+                    )
+                  }
+                >
+                  {index + 1}
+                </button>
+              );
+            }
+          )}
+
+        </div>
+
+      </main>
 
     </div>
   );

@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 function Login() {
   const navigate = useNavigate();
+  const { login, loading } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!email || !password) {
@@ -23,9 +25,18 @@ function Login() {
 
     setError("");
 
-    // Frontend testing only.
-    // Real authentication will be added with JWT in Step 5.
-    navigate("/dashboard");
+    try {
+      await login(email, password);
+
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Login error:", error);
+
+      setError(
+        error.response?.data?.message ||
+          "Login failed. Please check your email and password."
+      );
+    }
   };
 
   return (
@@ -123,9 +134,13 @@ function Login() {
           <button
             type="submit"
             className="auth-btn"
+            disabled={loading}
           >
-            Login
-            <span>→</span>
+            {loading ? "Logging in..." : "Login"}
+
+            {!loading && (
+              <span>→</span>
+            )}
           </button>
 
         </form>

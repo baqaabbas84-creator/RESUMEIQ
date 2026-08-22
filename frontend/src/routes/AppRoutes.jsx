@@ -1,21 +1,27 @@
 import {
   BrowserRouter,
   Routes,
-  Route
+  Route,
 } from "react-router-dom";
 
 import Home from "../pages/Home";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import ForgotPassword from "../components/auth/ForgotPassword";
+
 import Dashboard from "../pages/Dashboard";
 import UploadResume from "../pages/UploadResume";
 import Analysis from "../pages/Analysis";
+import ResumeBuilder from "../pages/ResumeBuilder";
+
 import Interview from "../pages/Interview";
 import InterviewResult from "../components/interview/InterviewResult";
+
 import History from "../pages/History";
 import Profile from "../pages/Profile";
 import NotFound from "../pages/NotFound";
+
+import ProtectedRoute from "../components/auth/ProtectedRoute";
 
 function AppRoutes() {
   return (
@@ -23,18 +29,15 @@ function AppRoutes() {
 
       <Routes>
 
-        {/* =========================
-            HOME
-        ========================= */}
+        {/* =====================================================
+            PUBLIC ROUTES
+        ===================================================== */}
+
         <Route
           path="/"
           element={<Home />}
         />
 
-
-        {/* =========================
-            AUTHENTICATION
-        ========================= */}
         <Route
           path="/login"
           element={<Login />}
@@ -51,69 +54,87 @@ function AppRoutes() {
         />
 
 
-        {/* =========================
-            DASHBOARD
-        ========================= */}
+        {/* =====================================================
+            PROTECTED ROUTES
+        ===================================================== */}
+
         <Route
           path="/dashboard"
-          element={<Dashboard />}
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
         />
 
-
-        {/* =========================
-            RESUME
-        ========================= */}
         <Route
           path="/upload-resume"
-          element={<UploadResume />}
+          element={
+            <ProtectedRoute>
+              <UploadResume />
+            </ProtectedRoute>
+          }
         />
 
+        <Route
+          path="/resume-builder"
+          element={
+            <ProtectedRoute>
+              <ResumeBuilder />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* =========================
-            ANALYSIS
-        ========================= */}
         <Route
           path="/analysis"
-          element={<Analysis />}
+          element={
+            <ProtectedRoute>
+              <Analysis />
+            </ProtectedRoute>
+          }
         />
 
-
-        {/* =========================
-            INTERVIEW
-        ========================= */}
         <Route
           path="/interview"
-          element={<Interview />}
+          element={
+            <ProtectedRoute>
+              <Interview />
+            </ProtectedRoute>
+          }
         />
 
-        {/* Interview Result */}
         <Route
           path="/interview/result"
-          element={<InterviewResult />}
+          element={
+            <ProtectedRoute>
+              <InterviewResult />
+            </ProtectedRoute>
+          }
         />
 
-
-        {/* =========================
-            HISTORY
-        ========================= */}
         <Route
           path="/history"
-          element={<History />}
+          element={
+            <ProtectedRoute>
+              <History />
+            </ProtectedRoute>
+          }
         />
 
-
-        {/* =========================
-            PROFILE
-        ========================= */}
         <Route
           path="/profile"
-          element={<Profile />}
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
         />
 
 
-        {/* =========================
+        {/* =====================================================
             404
-        ========================= */}
+        ===================================================== */}
+
         <Route
           path="*"
           element={<NotFound />}
