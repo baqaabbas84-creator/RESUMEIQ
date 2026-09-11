@@ -14409,7 +14409,7 @@ input {
   background: #4338ca;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 600px) {
   .dashboard-career-summary {
     align-items: flex-start;
     flex-direction: column;
